@@ -1,0 +1,202 @@
+{% extends "calorie_counter/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-0">Hello, {{ profile.name }} 👋</h1>
+        <p class="text-muted mb-0">{{ today|date:"l, d F Y" }}</p>
+    </div>
+    <a href="{% url 'profile' %}" class="btn btn-outline-primary btn-sm rounded-pill mt-2 mt-md-0">
+        <i class="bi bi-pencil-square me-1"></i> Edit my details
+    </a>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="icon-circle bg-info-subtle text-info mb-2"><i class="bi bi-lightning-charge"></i></div>
+                <div class="text-muted small">Your BMR</div>
+                <div class="stat-value">{{ profile.bmr }} <small>kcal</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="icon-circle bg-primary-subtle text-primary mb-2"><i class="bi bi-bullseye"></i></div>
+                <div class="text-muted small">Daily target</div>
+                <div class="stat-value">{{ target }} <small>kcal</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="icon-circle bg-warning-subtle text-warning mb-2"><i class="bi bi-egg-fried"></i></div>
+                <div class="text-muted small">Consumed today</div>
+                <div class="stat-value">{{ consumed }} <small>kcal</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body">
+                {% if remaining >= 0 %}
+                    <div class="icon-circle bg-success-subtle text-success mb-2"><i class="bi bi-check2-circle"></i></div>
+                    <div class="text-muted small">Remaining</div>
+                    <div class="stat-value text-success">{{ remaining }} <small>kcal</small></div>
+                {% else %}
+                    <div class="icon-circle bg-danger-subtle text-danger mb-2"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="text-muted small">Over target by</div>
+                    <div class="stat-value text-danger">{{ over_by }} <small>kcal</small></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between mb-2">
+            <span class="fw-semibold">Today's progress</span>
+            <span class="text-muted">{{ consumed }} / {{ target }} kcal</span>
+        </div>
+        <div class="progress progress-lg" role="progressbar" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bg-{{ status }}" style="width: {{ percent }}%">{{ percent }}%</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Left column: add food + guidelines -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 fw-bold mb-3"><i class="bi bi-plus-circle text-primary me-1"></i> Add what you ate</h2>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include "calorie_counter/_form_field.html" with field=form.item_name %}
+                    {% include "calorie_counter/_form_field.html" with field=form.calories %}
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-lg me-1"></i> Add entry
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h2 class="h5 fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-1"></i> Simple guidelines</h2>
+
+                {% if profile.goal == 'lose' %}
+                    <p class="small text-muted mb-2">
+                        Your target is about 500 kcal below your maintenance level (<strong>{{ profile.maintenance_calories }} kcal</strong>),
+                        which is a gentle loss of roughly 0.5 kg per week.
+                    </p>
+                    <ul class="small mb-0 ps-3">
+                        <li>Fill half your plate with vegetables.</li>
+                        <li>Drink water before meals and cut sugary drinks.</li>
+                        <li>Walk for 30 minutes most days.</li>
+                    </ul>
+                {% elif profile.goal == 'gain' %}
+                    <p class="small text-muted mb-2">
+                        Your target is about 500 kcal above your maintenance level (<strong>{{ profile.maintenance_calories }} kcal</strong>),
+                        which supports a gain of roughly 0.5 kg per week.
+                    </p>
+                    <ul class="small mb-0 ps-3">
+                        <li>Add healthy snacks like nuts, banana and milk.</li>
+                        <li>Eat protein with every meal.</li>
+                        <li>Pair it with strength training so the gain is muscle.</li>
+                    </ul>
+                {% else %}
+                    <p class="small text-muted mb-2">
+                        You are aiming to maintain your weight, so your target matches your daily needs
+                        (<strong>{{ profile.maintenance_calories }} kcal</strong>).
+                    </p>
+                    <ul class="small mb-0 ps-3">
+                        <li>Keep meals balanced and regular.</li>
+                        <li>Stay active and drink enough water.</li>
+                        <li>Check your weight every couple of weeks.</li>
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right column: today's entries + week -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 fw-bold mb-3"><i class="bi bi-list-check text-success me-1"></i> Today's meals</h2>
+
+                {% if entries %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Time</th>
+                                    <th class="text-end">Calories</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in entries %}
+                                    <tr>
+                                        <td class="fw-medium">{{ entry.item_name }}</td>
+                                        <td class="text-muted small">{{ entry.created_at|time:"h:i A" }}</td>
+                                        <td class="text-end">{{ entry.calories }} kcal</td>
+                                        <td class="text-end">
+                                            <form method="post" action="{% url 'delete_entry' entry.pk %}"
+                                                  onsubmit="return confirm('Remove this entry?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td colspan="2">Total</td>
+                                    <td class="text-end">{{ consumed }} kcal</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-cup-hot fs-1 d-block mb-2"></i>
+                        Nothing logged yet today. Add your first meal!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h2 class="h5 fw-bold mb-3"><i class="bi bi-calendar-week text-primary me-1"></i> Last 7 days</h2>
+                {% for day in week %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="week-label small text-muted">{{ day.date|date:"D, d M" }}</div>
+                        <div class="progress flex-grow-1 mx-3" style="height: 10px;">
+                            <div class="progress-bar bg-{{ day.status }}" style="width: {{ day.percent }}%"></div>
+                        </div>
+                        <div class="small fw-medium text-end week-total">{{ day.total }} kcal</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
